@@ -1,44 +1,93 @@
 {% extends "base.html" %}
-{% block title %}Women's Health At-Home Test Price Comparison{% endblock %}
+{% block title %}Women's Health At-Home Test Price Comparison — HerPriceCompare{% endblock %}
 
 {% block content %}
+
+{# ── Hero ── #}
 <section class="hero">
-  <h1>Compare prices on women's health at-home tests</h1>
-  <p>Find the best deals across CVS, Walgreens, Amazon, Everlywell, LetsGetChecked, and more.</p>
+  <div class="hero-content">
+    <h1>Compare prices on women's health at-home tests</h1>
+    <p>Find the best deals across CVS, Walgreens, Amazon, Everlywell, LetsGetChecked, and more — all in one place.</p>
+
+    {% if categories %}
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="stat-val">{{ categories|sum(attribute='count') }}</span>
+        <span class="stat-label">Products tracked</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stat">
+        <span class="stat-val">{{ categories|length }}</span>
+        <span class="stat-label">Categories</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stat">
+        <span class="stat-val">8+</span>
+        <span class="stat-label">Retailers compared</span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </section>
 
+{# ── Category grid ── #}
 <section class="category-grid">
-  <h2>Browse by category</h2>
+  <div class="section-header">
+    <h2>Browse by category</h2>
+  </div>
+
+  {% set cat_icons = {
+    "Pregnancy":          {"emoji": "🤰", "bg": "#fce4f0"},
+    "Ovulation & Fertility": {"emoji": "🌸", "bg": "#ede9fe"},
+    "STI / STD":          {"emoji": "🛡️", "bg": "#d1faf5"},
+    "Menopause & FSH":    {"emoji": "🌡️", "bg": "#ffedd5"},
+    "Thyroid":            {"emoji": "🦋", "bg": "#fef9c3"},
+    "Hormone Panel":      {"emoji": "⚗️", "bg": "#ede9fe"},
+    "UTI":                {"emoji": "💧", "bg": "#dbeafe"},
+    "Vaginal Health":     {"emoji": "🌺", "bg": "#fce4f0"},
+    "PCOS":               {"emoji": "💜", "bg": "#ede9fe"},
+    "Breast Cancer Risk": {"emoji": "🎗️", "bg": "#fce4f0"},
+    "General Wellness":   {"emoji": "💊", "bg": "#dcfce7"}
+  } %}
+
   {% if categories %}
   <div class="grid grid-3">
     {% for cat in categories %}
+    {% set icon_data = cat_icons.get(cat.name, {"emoji": "🧪", "bg": "#f3f4f6"}) %}
     <a class="card category-card" href="{{ url_for('main.category', category_name=cat.name) }}">
+      <div class="category-icon" style="background: {{ icon_data.bg }};">
+        {{ icon_data.emoji }}
+      </div>
       <h3>{{ cat.name }}</h3>
       <p class="count">{{ cat.count }} product{{ 's' if cat.count != 1 }}</p>
       {% if cat.min_price %}
       <p class="price-from">From <strong>${{ "%.2f"|format(cat.min_price) }}</strong></p>
       {% endif %}
+      <span class="cat-arrow">View products →</span>
     </a>
     {% endfor %}
   </div>
   {% else %}
   <div class="empty-state">
-    <p>No products yet. Run a scrape to populate the database:</p>
+    <div class="empty-icon">🧪</div>
+    <h3>No products yet</h3>
+    <p>Run a scrape to populate the database:</p>
     <pre>python run.py seed</pre>
   </div>
   {% endif %}
 </section>
 
+{# ── Data freshness (collapsed, low visual weight) ── #}
 {% if recent_logs or scheduled_jobs %}
 <section class="scrape-status">
-  <h2>Data freshness</h2>
+  <h2><i class="fa fa-circle-check" style="color:var(--teal);font-size:.85rem;"></i> Data freshness</h2>
 
   {% if scheduled_jobs %}
   <div class="scheduler-bar">
-    <span class="badge badge-green">● scheduler running</span>
+    <span class="badge badge-teal">● Live updates</span>
     {% for job in scheduled_jobs %}
     <span class="scheduler-job">
-      <strong>{{ job.name }}</strong> — next run:
+      <strong>{{ job.name }}</strong> — next refresh:
       {% if job.next_run %}
         {{ job.next_run.strftime('%b %d at %H:%M UTC') }}
       {% else %}
@@ -55,7 +104,7 @@
     <tbody>
     {% for log in recent_logs %}
     <tr>
-      <td><span class="badge {{ 'badge-green' if log.success else 'badge-red' }}">{{ log.source }}</span></td>
+      <td><span class="badge {{ 'badge-teal' if log.success else 'badge-red' }}">{{ log.source }}</span></td>
       <td>{{ log.retailer }}</td>
       <td>{{ log.products_found }}</td>
       <td>{{ log.products_updated }}</td>
@@ -68,4 +117,5 @@
   {% endif %}
 </section>
 {% endif %}
+
 {% endblock %}

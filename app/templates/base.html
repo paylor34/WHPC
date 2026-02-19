@@ -4,32 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Women's Health Price Comparison{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <header class="site-header">
-    <div class="container">
+    <div class="container header-inner">
       <a href="{{ url_for('main.home') }}" class="logo">
-        <span class="logo-icon">♀</span> WH Price Comparison
+        <span class="logo-mark">♀</span>
+        <span class="logo-text">HerPrice<span class="logo-accent">Compare</span></span>
       </a>
+
       <form class="search-bar" action="{{ url_for('main.search') }}" method="get">
-        <input type="text" name="q" placeholder="Search tests…" value="{{ request.args.get('q','') }}">
+        <i class="fa fa-search search-icon"></i>
+        <input type="text" name="q" placeholder="Search tests, brands…" value="{{ request.args.get('q','') }}" autocomplete="off">
         <button type="submit">Search</button>
       </form>
-      <nav>
-        <a href="{{ url_for('main.home') }}">Categories</a>
-        <a href="{{ url_for('main.api_products') }}">API</a>
+
+      <nav class="main-nav">
+        <a href="{{ url_for('main.home') }}"><i class="fa fa-grid-2"></i> Categories</a>
       </nav>
     </div>
   </header>
 
-  <main class="container">
+  <main class="container page-main">
     {% block content %}{% endblock %}
   </main>
 
-  <footer>
-    <div class="container">
-      <p>Prices updated regularly via Crawl4AI &amp; Outscraper. Always verify on the retailer's site.</p>
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo-mark" style="font-size:1.4rem;">♀</span>
+        <span style="font-weight:700;color:#fff;">HerPriceCompare</span>
+      </div>
+      <p class="footer-tagline">Helping women find the best prices on at-home health tests.</p>
+      <p class="footer-disclaimer">Prices updated regularly. Always verify on the retailer's site before purchasing.</p>
     </div>
   </footer>
 </body>
