@@ -219,6 +219,39 @@ footer p { font-size: .82rem; color: var(--gray-5); text-align: center; }
 .related-products { margin-top: 2rem; }
 .related-products h2 { margin-bottom: 1rem; }
 
+/* ── Compare selector bar ─────────────────────────────────────────────────── */
+.compare-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: var(--pink); color: #fff;
+  padding: .85rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.18);
+  transform: translateY(100%);
+  transition: transform .22s ease;
+  font-weight: 600;
+}
+.compare-bar.visible { transform: translateY(0); }
+.compare-bar .btn-compare {
+  background: #fff; color: var(--pink);
+  padding: .4rem 1.2rem; border-radius: 6px;
+  font-weight: 700; font-size: .9rem;
+}
+.compare-bar .btn-compare:hover { background: var(--pink-lt); text-decoration: none; }
+.compare-bar .btn-clear {
+  background: transparent; border: none; color: #fff;
+  cursor: pointer; font-size: .85rem; opacity: .8; font-weight: 600;
+}
+.compare-bar .btn-clear:hover { opacity: 1; }
+
+/* Checkbox overlay on product cards */
+.product-card { position: relative; }
+.product-select {
+  position: absolute; top: .65rem; right: .65rem;
+  width: 1.15rem; height: 1.15rem;
+  cursor: pointer; accent-color: var(--pink);
+  z-index: 1;
+}
+
 /* ── Scheduler status bar ─────────────────────────────────────────────────── */
 .scheduler-bar {
   display: flex; align-items: center; flex-wrap: wrap; gap: .75rem;

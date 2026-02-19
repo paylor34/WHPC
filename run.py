@@ -6,6 +6,7 @@ Usage:
   python run.py seed         — seed database with sample data
   python run.py scrape       — run a one-off Crawl4AI scrape
   python run.py export       — export DB → data/exports/products.json + listings.csv
+  python run.py import       — import data/exports/listings.csv into the database
   python run.py jobs         — list scheduled jobs and their next run times
 """
 import logging
@@ -44,6 +45,14 @@ def main():
             created, updated = upsert_products(products, source="crawl4ai")
             log_scrape("all", "crawl4ai", len(products), updated)
             rprint(f"[green]Done.[/green] {len(products)} found, {created} new, {updated} updated.")
+
+    elif command == "import":
+        with app.app_context():
+            from data.import_csv import import_from_csv
+            from rich import print as rprint
+            rprint("[bold]Importing from data/exports/listings.csv…[/bold]")
+            created, upserted = import_from_csv()
+            rprint(f"[green]Done.[/green] {created} new products, {upserted} listings upserted.")
 
     elif command == "export":
         with app.app_context():

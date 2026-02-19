@@ -19,7 +19,9 @@
 {% if products %}
 <div class="grid grid-3">
   {% for product in products %}
-  <div class="card product-card">
+  <div class="card product-card" data-id="{{ product.id }}">
+    <input type="checkbox" class="product-select" title="Select to compare" aria-label="Select {{ product.name }} for comparison">
+
     {% if product.image_url %}
     <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-thumb" loading="lazy">
     {% else %}
@@ -50,4 +52,55 @@
   <p>No products found in this category yet.</p>
 </div>
 {% endif %}
+
+<!-- Sticky compare bar — appears when 2–4 products are selected -->
+<div class="compare-bar" id="compareBar" aria-live="polite" aria-hidden="true">
+  <span id="compareCount">0 products selected</span>
+  <div style="display:flex;gap:.75rem;align-items:center;">
+    <button class="btn-clear" onclick="clearSelection()">Clear</button>
+    <a class="btn-compare" id="compareLink" href="/compare">Compare</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  var selected = [];
+  var bar = document.getElementById('compareBar');
+  var countEl = document.getElementById('compareCount');
+  var link = document.getElementById('compareLink');
+
+  document.querySelectorAll('.product-select').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      var id = cb.closest('.product-card').dataset.id;
+      if (cb.checked) {
+        if (selected.length >= 4) { cb.checked = false; return; }
+        selected.push(id);
+      } else {
+        selected = selected.filter(function (x) { return x !== id; });
+      }
+      update();
+    });
+  });
+
+  function update() {
+    var n = selected.length;
+    countEl.textContent = n + ' product' + (n !== 1 ? 's' : '') + ' selected'
+      + (n >= 4 ? ' (max)' : '');
+    link.href = '/compare?ids=' + selected.join(',');
+    if (n >= 2) {
+      bar.classList.add('visible');
+      bar.setAttribute('aria-hidden', 'false');
+    } else {
+      bar.classList.remove('visible');
+      bar.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  window.clearSelection = function () {
+    selected = [];
+    document.querySelectorAll('.product-select').forEach(function (cb) { cb.checked = false; });
+    update();
+  };
+}());
+</script>
 {% endblock %}
