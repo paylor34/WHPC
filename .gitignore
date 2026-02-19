@@ -12,3 +12,8 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+
+# Exported data files ARE tracked (committed after each scrape run)
+# The SQLite DB above is excluded; the flat-file exports below are included.
+!data/exports/
+!data/exports/**

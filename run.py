@@ -5,6 +5,7 @@ Usage:
   python run.py              — start the web server + background scheduler
   python run.py seed         — seed database with sample data
   python run.py scrape       — run a one-off Crawl4AI scrape
+  python run.py export       — export DB → data/exports/products.json + listings.csv
   python run.py jobs         — list scheduled jobs and their next run times
 """
 import logging
@@ -43,6 +44,14 @@ def main():
             created, updated = upsert_products(products, source="crawl4ai")
             log_scrape("all", "crawl4ai", len(products), updated)
             rprint(f"[green]Done.[/green] {len(products)} found, {created} new, {updated} updated.")
+
+    elif command == "export":
+        with app.app_context():
+            from data.export import export_all
+            products, listings = export_all()
+            print(f"Exported {products} products and {listings} listings to data/exports/")
+            print("  data/exports/products.json")
+            print("  data/exports/listings.csv")
 
     elif command == "jobs":
         # List APScheduler jobs and their next run times
