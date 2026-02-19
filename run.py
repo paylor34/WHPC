@@ -74,10 +74,11 @@ def main():
             print(f"  {job.id:30s}  next: {job.next_run_time}")
 
     else:  # serve
-        print("Starting dev server + background scheduler at http://127.0.0.1:5000")
+        port = int(app.config.get("PORT", 5001))
+        print(f"Starting dev server + background scheduler at http://127.0.0.1:{port}")
         print("Prices will refresh every", app.config.get("REFRESH_INTERVAL_HOURS", 24), "hours.")
         # use_reloader=False prevents APScheduler from starting twice in debug mode
-        app.run(debug=True, port=5000, use_reloader=False)
+        app.run(debug=True, port=port, use_reloader=False)
 
 
 if __name__ == "__main__":
