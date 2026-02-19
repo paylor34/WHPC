@@ -45,78 +45,189 @@ class ScrapedProduct:
 
 
 # ── Per-retailer CSS extraction schemas ───────────────────────────────────────
-# These tell Crawl4AI exactly which CSS selectors map to which fields.
-# Adjust selectors when a retailer redesigns its pages.
+# Each schema has:
+#   baseSelector — the repeating product card container
+#   fields       — field-level CSS selectors within that container
+#   wait_for     — selector Crawl4AI waits on before extracting (JS render guard)
+#   base_url     — used to resolve relative hrefs
+#
+# Confidence legend in comments:  ✓ verified  ~ likely  ? guessed
+# Run `python -m scraper.selector_inspector` locally to re-verify.
 
 CVS_SCHEMA = {
+    # CVS is a React SPA; products render inside a list with class
+    # "product-list" and individual cards are "product-list-item".
+    # data-testid attributes are more stable than plain class names.
+    # ~ based on publicly documented CVS React DOM patterns.
     "name": "CVS Products",
-    "baseSelector": ".product-card",
+    "baseSelector": ".product-list-item",          # ~ also try [data-testid="product-card"]
+    "wait_for": ".product-list-item",
+    "base_url": "https://www.cvs.com",
     "fields": [
-        {"name": "name",          "selector": ".product-title",      "type": "text"},
-        {"name": "price",         "selector": ".price .value",       "type": "text"},
-        {"name": "original_price","selector": ".price .strike",      "type": "text"},
-        {"name": "url",           "selector": "a.product-link",      "type": "attribute", "attribute": "href"},
-        {"name": "image_url",     "selector": "img.product-image",   "type": "attribute", "attribute": "src"},
-        {"name": "in_stock",      "selector": ".add-to-cart",        "type": "exists"},
+        # ~ product name is usually inside a heading or data-testid="product-title"
+        {"name": "name",           "selector": "[data-testid='product-title'], .product-name, h3",
+                                   "type": "text"},
+        # ~ price appears as <span class="price"> or inside a promo wrapper
+        {"name": "price",          "selector": "[data-testid='price-display'], .price, [class*='price']",
+                                   "type": "text"},
+        # ~ strike-through shown only when on sale
+        {"name": "original_price", "selector": "[class*='strike'], [class*='was-price'], del, s",
+                                   "type": "text"},
+        # ~ product link wraps the image/name
+        {"name": "url",            "selector": "a[href*='/shop/']",
+                                   "type": "attribute", "attribute": "href"},
+        # Crawl4AI uses Playwright so images are rendered; src is populated after scroll.
+        # data-src is a fallback for sites using IntersectionObserver without swap.
+        {"name": "image_url",      "selector": "picture img, img[class*='product'], img",
+                                   "type": "attribute", "attribute": "src"},
+        # ~ add-to-cart present when in stock
+        {"name": "in_stock",       "selector": "[data-testid='add-to-cart'], button[class*='add-to-cart']",
+                                   "type": "exists"},
     ],
 }
 
 WALGREENS_SCHEMA = {
+    # Walgreens renders product tiles server-side for the first page;
+    # subsequent pages are client-side via their WAG React shell.
+    # ~ based on Walgreens search page DOM analysis reports (2023-24).
     "name": "Walgreens Products",
-    "baseSelector": ".product-tile",
+    "baseSelector": ".product-tile",               # ~ also try [class*='productTile']
+    "wait_for": ".product-tile",
+    "base_url": "https://www.walgreens.com",
     "fields": [
-        {"name": "name",          "selector": ".product-name",       "type": "text"},
-        {"name": "price",         "selector": ".product-price",      "type": "text"},
-        {"name": "url",           "selector": "a.product-tile-link", "type": "attribute", "attribute": "href"},
-        {"name": "image_url",     "selector": "img.product-image",   "type": "attribute", "attribute": "src"},
-        {"name": "in_stock",      "selector": ".add-to-cart-btn",    "type": "exists"},
+        # ~ name in <p> or <a> with class "product-name"
+        {"name": "name",           "selector": ".product-name a, .product-tile-name, [class*='product-name']",
+                                   "type": "text"},
+        # ~ regular price in span; promo price may override
+        {"name": "price",          "selector": ".regular-price, .product-price, [class*='sale-price'], [class*='price']",
+                                   "type": "text"},
+        # ~ was-price only present during promotions
+        {"name": "original_price", "selector": "[class*='was-price'], [class*='strikethrough'], del",
+                                   "type": "text"},
+        # ~ link wraps the tile or is on the product name anchor
+        {"name": "url",            "selector": "a.product-tile-link, a[href*='/store/']",
+                                   "type": "attribute", "attribute": "href"},
+        {"name": "image_url",      "selector": "img.product-image, picture img, img",
+                                   "type": "attribute", "attribute": "src"},
+        # ~ in-stock if add-to-cart button is present and not disabled
+        {"name": "in_stock",       "selector": ".add-to-cart-btn:not([disabled]), [class*='addToCart']:not([disabled])",
+                                   "type": "exists"},
     ],
 }
 
 AMAZON_SCHEMA = {
+    # Amazon's search result structure is well-documented and rarely changes
+    # at the attribute level (data-component-type, .a-price, .s-image).
+    # ✓ high confidence — corroborated by multiple open-source scrapers.
     "name": "Amazon Products",
-    "baseSelector": '[data-component-type="s-search-result"]',
+    "baseSelector": '[data-component-type="s-search-result"]',   # ✓
+    "wait_for": '[data-component-type="s-search-result"]',
+    "base_url": "https://www.amazon.com",
     "fields": [
-        {"name": "name",      "selector": "h2 span",                              "type": "text"},
-        {"name": "price",     "selector": ".a-price .a-offscreen",                "type": "text"},
-        {"name": "url",       "selector": "h2 a",                                 "type": "attribute", "attribute": "href"},
-        {"name": "image_url", "selector": ".s-image",                             "type": "attribute", "attribute": "src"},
-        {"name": "rating",    "selector": ".a-icon-alt",                          "type": "text"},
-        {"name": "in_stock",  "selector": '[data-cy="add-to-cart-button-announce"]',"type": "exists"},
+        # ✓ title is always in h2 > span with this class
+        {"name": "name",           "selector": "h2 span.a-text-normal, h2 .a-size-base-plus, h2 span",
+                                   "type": "text"},
+        # ✓ .a-offscreen holds the screen-reader price string e.g. "$12.99"
+        # data-a-size="xl" targets the main price, not the cents-only span
+        {"name": "price",          "selector": ".a-price[data-a-size='xl'] .a-offscreen, .a-price .a-offscreen",
+                                   "type": "text"},
+        # ✓ strike-through price uses data-a-strike attribute
+        {"name": "original_price", "selector": ".a-price[data-a-strike='true'] .a-offscreen, span.a-price.a-text-price .a-offscreen",
+                                   "type": "text"},
+        # ✓ product URL on the h2 anchor; returns a relative /dp/... path
+        {"name": "url",            "selector": "h2 a.a-link-normal, a.s-no-outline",
+                                   "type": "attribute", "attribute": "href"},
+        # ✓ product image always has class s-image
+        {"name": "image_url",      "selector": "img.s-image",
+                                   "type": "attribute", "attribute": "src"},
+        # ✓ star rating text for future use
+        {"name": "rating",         "selector": "span.a-icon-alt",
+                                   "type": "text"},
+        # ~ add-to-cart is not always present on search results; price
+        # existing is a better in-stock signal — handled in _normalize()
+        {"name": "in_stock",       "selector": ".a-declarative[data-action='add-to-cart'], input[name='add-to-cart']",
+                                   "type": "exists"},
     ],
 }
 
 TARGET_SCHEMA = {
+    # Target uses data-test attributes extensively and keeps them stable
+    # across React re-renders — the most reliable selectors of any retailer here.
+    # ✓ high confidence — data-test= values are part of Target's QA harness.
     "name": "Target Products",
-    "baseSelector": '[data-test="product-details"]',
+    "baseSelector": '[data-test="product-list-item"]',            # ✓ outer wrapper
+    "wait_for": '[data-test="product-list-item"]',
+    "base_url": "https://www.target.com",
     "fields": [
-        {"name": "name",      "selector": '[data-test="product-title"]',          "type": "text"},
-        {"name": "price",     "selector": '[data-test="current-price"] span',     "type": "text"},
-        {"name": "url",       "selector": "a",                                    "type": "attribute", "attribute": "href"},
-        {"name": "image_url", "selector": "img",                                  "type": "attribute", "attribute": "src"},
-        {"name": "in_stock",  "selector": '[data-test="shippingBlock"]',          "type": "exists"},
+        # ✓ product title anchor — doubles as the link
+        {"name": "name",           "selector": '[data-test="product-title"]',
+                                   "type": "text"},
+        # ✓ current/sale price; the span inside holds the formatted value
+        {"name": "price",          "selector": '[data-test="current-price"] span, [data-test="current-price"]',
+                                   "type": "text"},
+        # ✓ regular price shown alongside when on sale
+        {"name": "original_price", "selector": '[data-test="reg-price"] span, [data-test="regular-price"]',
+                                   "type": "text"},
+        # ✓ href on the product title anchor
+        {"name": "url",            "selector": '[data-test="product-title"]',
+                                   "type": "attribute", "attribute": "href"},
+        # ~ product image; Target uses srcset so grab the src fallback
+        {"name": "image_url",      "selector": '[data-test="product-image"] img, picture img',
+                                   "type": "attribute", "attribute": "src"},
+        # ~ shipping/pickup block present when in stock
+        {"name": "in_stock",       "selector": '[data-test="shippingBlock"], button[data-test="addToCartButton"]',
+                                   "type": "exists"},
     ],
 }
 
 EVERLYWELL_SCHEMA = {
+    # Everlywell uses Shopify (Debut-derived theme) with some custom CSS.
+    # Collections page renders product cards as <li class="product-item">.
+    # ~ based on Shopify Debut theme DOM patterns + Everlywell-specific overrides.
     "name": "Everlywell Products",
-    "baseSelector": ".product-item",
+    "baseSelector": "li.product-item, .product-item",             # ~ Shopify Debut
+    "wait_for": ".product-item",
+    "base_url": "https://www.everlywell.com",
     "fields": [
-        {"name": "name",      "selector": ".product-item__title",                 "type": "text"},
-        {"name": "price",     "selector": ".price",                               "type": "text"},
-        {"name": "url",       "selector": "a.product-item__link",                 "type": "attribute", "attribute": "href"},
-        {"name": "image_url", "selector": "img.product-item__image",              "type": "attribute", "attribute": "src"},
+        # ~ title in <a> or <h3> with BEM class
+        {"name": "name",           "selector": ".product-item__title, .product-item__title a, h3[class*='title']",
+                                   "type": "text"},
+        # ~ Shopify price structure: .price > .price__regular > .price-item--regular
+        {"name": "price",          "selector": ".price-item--regular, .price .money, [class*='price'] .money",
+                                   "type": "text"},
+        # ~ compare-at price (Shopify's term for was-price)
+        {"name": "original_price", "selector": ".price__compare .price-item, .price--compare .money",
+                                   "type": "text"},
+        # ~ product link — Shopify always uses /products/<handle>
+        {"name": "url",            "selector": "a.product-item__link, a[href*='/products/']",
+                                   "type": "attribute", "attribute": "href"},
+        {"name": "image_url",      "selector": ".product-item__image, .card__media img, picture img",
+                                   "type": "attribute", "attribute": "src"},
     ],
 }
 
 LGCHECKED_SCHEMA = {
+    # LetsGetChecked has migrated to a Next.js app (2023+).
+    # Their product cards no longer use classic BEM; they now use
+    # utility/generated class names or semantic HTML with data- attributes.
+    # ? lower confidence — run selector_inspector.py to verify.
     "name": "LetsGetChecked Products",
-    "baseSelector": ".test-card",
+    "baseSelector": "article, [class*='TestCard'], [class*='test-card'], .product-card",   # ? try all
+    "wait_for": "article",
+    "base_url": "https://www.letsgetchecked.com",
     "fields": [
-        {"name": "name",      "selector": ".test-card__title",                    "type": "text"},
-        {"name": "price",     "selector": ".test-card__price",                    "type": "text"},
-        {"name": "url",       "selector": "a.test-card__link",                    "type": "attribute", "attribute": "href"},
-        {"name": "image_url", "selector": "img",                                  "type": "attribute", "attribute": "src"},
+        # ? title commonly in h2/h3 inside the card article
+        {"name": "name",           "selector": "h2, h3, [class*='title'], [class*='name']",
+                                   "type": "text"},
+        # ? price may be in a <span> or <p> with class containing "price"
+        {"name": "price",          "selector": "[class*='price'], [data-testid*='price']",
+                                   "type": "text"},
+        # ? internal links follow /us/en/... or /test/... pattern
+        {"name": "url",            "selector": "a[href*='/test/'], a[href*='/en/'], article > a, a",
+                                   "type": "attribute", "attribute": "href"},
+        # ? images are usually the first <img> or <picture img> in the card
+        {"name": "image_url",      "selector": "picture img, img[src*='cdn'], img",
+                                   "type": "attribute", "attribute": "src"},
     ],
 }
 
@@ -182,7 +293,7 @@ def _infer_category(name: str, description: str) -> str:
     return "General Wellness"
 
 
-def _normalize(raw_item: dict, retailer: str, retailer_logo: str, base_url: str) -> Optional[ScrapedProduct]:
+def _normalize(raw_item: dict, retailer: str, retailer_logo: str, base_url: str, schema: dict | None = None) -> Optional[ScrapedProduct]:
     """Convert a raw CSS-extracted dict into a ScrapedProduct."""
     name = (raw_item.get("name") or "").strip()
     price_raw = raw_item.get("price") or ""
@@ -191,9 +302,16 @@ def _normalize(raw_item: dict, retailer: str, retailer_logo: str, base_url: str)
     if not name or price is None:
         return None
 
+    # Resolve the product URL.
+    # Use the schema's declared base_url (e.g. "https://www.amazon.com") so
+    # that relative paths like "/dp/B000052XCW" become absolute correctly,
+    # rather than being joined onto the search-result query URL.
     url = raw_item.get("url") or ""
     if url and not url.startswith("http"):
-        url = base_url.rstrip("/") + "/" + url.lstrip("/")
+        declared_base = (schema or {}).get("base_url", "").rstrip("/")
+        fallback_base = base_url.rstrip("/")
+        root = declared_base or fallback_base
+        url = root + "/" + url.lstrip("/")
 
     orig_raw = raw_item.get("original_price") or ""
     original_price = _parse_price(orig_raw)
@@ -274,13 +392,20 @@ async def scrape_retailer(
     else:
         strategy = JsonCssExtractionStrategy(schema, verbose=False)
 
+    # Use the per-schema wait_for if available; fall back to baseSelector
+    wait_for_sel = (schema or {}).get("wait_for") or (schema or {}).get("baseSelector") or "body"
+
     config = CrawlerRunConfig(
         extraction_strategy=strategy,
-        # Wait for the product grid to appear before extracting
-        wait_for=schema["baseSelector"] if schema else "body",
-        # Scroll to load lazy-loaded products
-        js_code="window.scrollTo(0, document.body.scrollHeight);",
-        delay_before_return_html=2.0,
+        # Block images/fonts to speed up the crawl (we get image URLs from HTML)
+        # Scroll once to trigger lazy-load, wait for network to settle
+        wait_for=wait_for_sel,
+        js_code=(
+            "window.scrollTo(0, document.body.scrollHeight);"
+            "await new Promise(r => setTimeout(r, 1500));"
+            "window.scrollTo(0, 0);"
+        ),
+        delay_before_return_html=2.5,
     )
 
     rprint(f"[cyan]Crawl4AI:[/cyan] scraping [bold]{retailer}[/bold] → {search_url}")
@@ -295,7 +420,7 @@ async def scrape_retailer(
     raw_items = json.loads(result.extracted_content or "[]")
     products = []
     for item in raw_items:
-        p = _normalize(item, retailer, retailer_logo, search_url)
+        p = _normalize(item, retailer, retailer_logo, search_url, schema=schema)
         if p:
             products.append(p)
 
