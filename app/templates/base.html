@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Women's Health Price Comparison{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="{{ url_for('main.home') }}" class="logo">
+        <span class="logo-icon">♀</span> WH Price Comparison
+      </a>
+      <form class="search-bar" action="{{ url_for('main.search') }}" method="get">
+        <input type="text" name="q" placeholder="Search tests…" value="{{ request.args.get('q','') }}">
+        <button type="submit">Search</button>
+      </form>
+      <nav>
+        <a href="{{ url_for('main.home') }}">Categories</a>
+        <a href="{{ url_for('main.api_products') }}">API</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>Prices updated regularly via Crawl4AI &amp; Outscraper. Always verify on the retailer's site.</p>
+    </div>
+  </footer>
+</body>
+</html>

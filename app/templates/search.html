@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Search: {{ q }} — WH Price Comparison{% endblock %}
+
+{% block content %}
+<h1>Search results for "{{ q }}"</h1>
+
+{% if results %}
+<p>{{ results|length }} result{{ 's' if results|length != 1 }} found.</p>
+<div class="grid grid-3">
+  {% for product in results %}
+  <div class="card product-card">
+    <div class="product-info">
+      <span class="brand">{{ product.brand }}</span>
+      <h3><a href="{{ url_for('main.product', product_id=product.id) }}">{{ product.name }}</a></h3>
+      <span class="category-badge">{{ product.category }}</span>
+      {% if product.lowest_price %}
+      <p class="price">From <strong>${{ "%.2f"|format(product.lowest_price) }}</strong></p>
+      {% endif %}
+      <a class="btn btn-primary" href="{{ url_for('main.product', product_id=product.id) }}">Compare prices</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% elif q %}
+<p>No results for "{{ q }}". Try a different search term.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — WH Price Comparison{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+  <a href="{{ url_for('main.home') }}">Home</a> &rsaquo;
+  <a href="{{ url_for('main.category', category_name=product.category) }}">{{ product.category }}</a> &rsaquo;
+  {{ product.name }}
+</nav>
+
+<div class="product-hero">
+  {% if product.image_url %}
+  <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-hero-img">
+  {% endif %}
+
+  <div class="product-hero-info">
+    <span class="brand">{{ product.brand }}</span>
+    <h1>{{ product.name }}</h1>
+    <span class="category-badge">{{ product.category }}</span>
+
+    {% if product.lowest_price %}
+    <p class="hero-price">From <strong>${{ "%.2f"|format(product.lowest_price) }}</strong></p>
+    {% endif %}
+
+    {% if product.description %}
+    <p class="description">{{ product.description }}</p>
+    {% endif %}
+
+    {% if product.tag_list %}
+    <div class="tags">
+      {% for tag in product.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Price comparison table -->
+<section class="price-table-section">
+  <h2>Where to buy</h2>
+  {% if listings %}
+  <table class="price-table">
+    <thead>
+      <tr>
+        <th>Retailer</th>
+        <th>Price</th>
+        <th>Was</th>
+        <th>Discount</th>
+        <th>Availability</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for listing in listings %}
+      <tr class="{{ 'best-price' if loop.first and listing.in_stock }}">
+        <td>
+          {% if listing.retailer_logo %}
+          <img src="{{ listing.retailer_logo }}" alt="" class="retailer-logo">
+          {% endif %}
+          {{ listing.retailer }}
+          {% if loop.first and listing.in_stock %}<span class="badge badge-green">Best price</span>{% endif %}
+        </td>
+        <td class="price">${{ "%.2f"|format(listing.price) }}</td>
+        <td class="orig-price">
+          {% if listing.original_price %}${{ "%.2f"|format(listing.original_price) }}{% else %}—{% endif %}
+        </td>
+        <td>
+          {% if listing.discount_pct %}
+          <span class="badge badge-orange">-{{ listing.discount_pct }}%</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if listing.in_stock %}
+          <span class="badge badge-green">In stock</span>
+          {% else %}
+          <span class="badge badge-red">Out of stock</span>
+          {% endif %}
+        </td>
+        <td>
+          <a class="btn btn-primary" href="{{ listing.url }}" target="_blank" rel="noopener">
+            Buy now ↗
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="disclaimer">Prices last checked {{ listings[0].scraped_at.strftime('%b %d, %Y at %H:%M UTC') if listings else '' }}. Always verify on the retailer's site.</p>
+  {% else %}
+  <p>No listings available for this product.</p>
+  {% endif %}
+</section>
+
+<!-- Related products -->
+{% if related %}
+<section class="related-products">
+  <h2>Also in {{ product.category }}</h2>
+  <div class="grid grid-4">
+    {% for p in related %}
+    <div class="card product-card-sm">
+      <h4><a href="{{ url_for('main.product', product_id=p.id) }}">{{ p.name }}</a></h4>
+      {% if p.lowest_price %}
+      <p class="price">From <strong>${{ "%.2f"|format(p.lowest_price) }}</strong></p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Compare Products — WH Price Comparison{% endblock %}
+
+{% block content %}
+<h1>Side-by-side comparison</h1>
+{% if products %}
+<div class="compare-table-wrap">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        {% for p in products %}<th>{{ p.name }}<br><small>{{ p.brand }}</small></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Category</td>
+        {% for p in products %}<td>{{ p.category }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Lowest price</td>
+        {% for p in products %}
+        <td>
+          {% if p.lowest_price %}<strong>${{ "%.2f"|format(p.lowest_price) }}</strong>
+          {% else %}N/A{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% for retailer in all_retailers %}
+      <tr>
+        <td>{{ retailer }}</td>
+        {% for p in products %}
+        {% set listing = p.listings|selectattr("retailer","equalto",retailer)|first %}
+        <td>
+          {% if listing %}
+          <a href="{{ listing.url }}" target="_blank">${{ "%.2f"|format(listing.price) }} ↗</a>
+          {% else %}—{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      <tr>
+        <td>Tags</td>
+        {% for p in products %}
+        <td>
+          {% for tag in p.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}
+          {% if not p.tag_list %}—{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>Add products to compare via <code>/compare?ids=1,2,3</code>.</p>
+{% endif %}
+{% endblock %}

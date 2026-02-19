@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Women's Health At-Home Test Price Comparison{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Compare prices on women's health at-home tests</h1>
+  <p>Find the best deals across CVS, Walgreens, Amazon, Everlywell, LetsGetChecked, and more.</p>
+</section>
+
+<section class="category-grid">
+  <h2>Browse by category</h2>
+  {% if categories %}
+  <div class="grid grid-3">
+    {% for cat in categories %}
+    <a class="card category-card" href="{{ url_for('main.category', category_name=cat.name) }}">
+      <h3>{{ cat.name }}</h3>
+      <p class="count">{{ cat.count }} product{{ 's' if cat.count != 1 }}</p>
+      {% if cat.min_price %}
+      <p class="price-from">From <strong>${{ "%.2f"|format(cat.min_price) }}</strong></p>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No products yet. Run a scrape to populate the database:</p>
+    <pre>python run.py seed</pre>
+  </div>
+  {% endif %}
+</section>
+
+{% if recent_logs %}
+<section class="scrape-status">
+  <h2>Data freshness</h2>
+  <table>
+    <thead><tr><th>Source</th><th>Retailer</th><th>Found</th><th>Updated</th><th>When</th></tr></thead>
+    <tbody>
+    {% for log in recent_logs %}
+    <tr>
+      <td><span class="badge {{ 'badge-green' if log.success else 'badge-red' }}">{{ log.source }}</span></td>
+      <td>{{ log.retailer }}</td>
+      <td>{{ log.products_found }}</td>
+      <td>{{ log.products_updated }}</td>
+      <td>{{ log.started_at.strftime('%b %d %H:%M') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

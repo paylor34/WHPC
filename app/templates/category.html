@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ category }} Tests — WH Price Comparison{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+  <a href="{{ url_for('main.home') }}">Home</a> &rsaquo; {{ category }}
+</nav>
+
+<div class="page-header">
+  <h1>{{ category }} Tests</h1>
+  <div class="sort-bar">
+    Sort by:
+    <a href="?sort=price"    class="{{ 'active' if sort == 'price' }}">Lowest price</a>
+    <a href="?sort=name"     class="{{ 'active' if sort == 'name' }}">Name</a>
+    <a href="?sort=discount" class="{{ 'active' if sort == 'discount' }}">Biggest discount</a>
+  </div>
+</div>
+
+{% if products %}
+<div class="grid grid-3">
+  {% for product in products %}
+  <div class="card product-card">
+    {% if product.image_url %}
+    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-thumb" loading="lazy">
+    {% else %}
+    <div class="product-thumb placeholder">🧪</div>
+    {% endif %}
+
+    <div class="product-info">
+      <span class="brand">{{ product.brand }}</span>
+      <h3><a href="{{ url_for('main.product', product_id=product.id) }}">{{ product.name }}</a></h3>
+
+      {% if product.lowest_price %}
+      <p class="price">From <strong>${{ "%.2f"|format(product.lowest_price) }}</strong></p>
+      {% else %}
+      <p class="price out-of-stock">Out of stock</p>
+      {% endif %}
+
+      <p class="retailer-count">{{ product.listings|length }} retailer{{ 's' if product.listings|length != 1 }}</p>
+
+      <div class="card-actions">
+        <a class="btn btn-primary" href="{{ url_for('main.product', product_id=product.id) }}">Compare prices</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No products found in this category yet.</p>
+</div>
+{% endif %}
+{% endblock %}
