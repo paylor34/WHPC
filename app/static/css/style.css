@@ -218,3 +218,12 @@ footer p { font-size: .82rem; color: var(--gray-5); text-align: center; }
 /* ── Related products ─────────────────────────────────────────────────────── */
 .related-products { margin-top: 2rem; }
 .related-products h2 { margin-bottom: 1rem; }
+
+/* ── Scheduler status bar ─────────────────────────────────────────────────── */
+.scheduler-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .75rem;
+  background: var(--teal-lt); border-radius: 8px;
+  padding: .6rem 1rem; margin-bottom: .75rem; font-size: .85rem;
+}
+.scheduler-job { color: #444; }
+.scheduler-job strong { color: var(--teal); }

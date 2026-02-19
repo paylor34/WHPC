@@ -8,6 +8,9 @@ Endpoints:
   GET  /compare?ids=1,2,3     — Side-by-side comparison (up to 4 products)
   GET  /search?q=             — Full-text search
   GET  /api/products          — JSON list (supports ?category=&q= filters)
+  GET  /api/products/<id>     — Single product JSON
+  GET  /api/categories        — Category stats JSON
+  GET  /api/scheduler         — Scheduled job list + next run times
   POST /api/scrape            — Trigger a background scrape (dev use)
 """
 from flask import Blueprint, abort, jsonify, render_template, request
@@ -40,9 +43,25 @@ def _category_stats() -> list[dict]:
 
 @bp.route("/")
 def home():
+    from flask import current_app
     categories = _category_stats()
     recent_logs = ScrapeLog.query.order_by(ScrapeLog.started_at.desc()).limit(5).all()
-    return render_template("index.html", categories=categories, recent_logs=recent_logs)
+
+    scheduler = getattr(current_app, "scheduler", None)
+    scheduled_jobs = []
+    if scheduler and scheduler.running:
+        for job in scheduler.get_jobs():
+            scheduled_jobs.append({
+                "name": job.name,
+                "next_run": job.next_run_time,
+            })
+
+    return render_template(
+        "index.html",
+        categories=categories,
+        recent_logs=recent_logs,
+        scheduled_jobs=scheduled_jobs,
+    )
 
 
 @bp.route("/category/<path:category_name>")
@@ -166,6 +185,25 @@ def api_product(product_id: int):
 @bp.route("/api/categories")
 def api_categories():
     return jsonify(_category_stats())
+
+
+@bp.route("/api/scheduler")
+def api_scheduler():
+    """Return the status of all scheduled jobs."""
+    from flask import current_app
+    scheduler = getattr(current_app, "scheduler", None)
+    if scheduler is None:
+        return jsonify({"running": False, "jobs": []})
+
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            "id": job.id,
+            "name": job.name,
+            "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            "trigger": str(job.trigger),
+        })
+    return jsonify({"running": scheduler.running, "jobs": jobs})
 
 
 @bp.route("/api/scrape", methods=["POST"])

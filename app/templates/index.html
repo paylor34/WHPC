@@ -29,11 +29,29 @@
   {% endif %}
 </section>
 
-{% if recent_logs %}
+{% if recent_logs or scheduled_jobs %}
 <section class="scrape-status">
   <h2>Data freshness</h2>
+
+  {% if scheduled_jobs %}
+  <div class="scheduler-bar">
+    <span class="badge badge-green">● scheduler running</span>
+    {% for job in scheduled_jobs %}
+    <span class="scheduler-job">
+      <strong>{{ job.name }}</strong> — next run:
+      {% if job.next_run %}
+        {{ job.next_run.strftime('%b %d at %H:%M UTC') }}
+      {% else %}
+        unknown
+      {% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if recent_logs %}
   <table>
-    <thead><tr><th>Source</th><th>Retailer</th><th>Found</th><th>Updated</th><th>When</th></tr></thead>
+    <thead><tr><th>Source</th><th>Retailer</th><th>Found</th><th>Updated</th><th>When</th><th></th></tr></thead>
     <tbody>
     {% for log in recent_logs %}
     <tr>
@@ -42,10 +60,12 @@
       <td>{{ log.products_found }}</td>
       <td>{{ log.products_updated }}</td>
       <td>{{ log.started_at.strftime('%b %d %H:%M') }}</td>
+      <td>{% if not log.success %}<span class="badge badge-red" title="{{ log.errors }}">error</span>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 </section>
 {% endif %}
 {% endblock %}
