@@ -5,7 +5,6 @@ Usage:
   python run.py              — start the web server + background scheduler
   python run.py seed         — seed database with sample data
   python run.py scrape       — run a one-off Crawl4AI scrape
-  python run.py scrape-gs    — run a one-off Outscraper Google Shopping scrape
   python run.py jobs         — list scheduled jobs and their next run times
 """
 import logging
@@ -43,24 +42,6 @@ def main():
             products = asyncio.run(scrape_all(SCRAPE_TARGETS))
             created, updated = upsert_products(products, source="crawl4ai")
             log_scrape("all", "crawl4ai", len(products), updated)
-            rprint(f"[green]Done.[/green] {len(products)} found, {created} new, {updated} updated.")
-
-    elif command == "scrape-gs":
-        with app.app_context():
-            from config import Config
-            from scraper.outscraper_client import OutscraperShopping
-            from scraper.importer import upsert_products, log_scrape
-            from rich import print as rprint
-
-            if not Config.OUTSCRAPER_API_KEY:
-                print("ERROR: Set OUTSCRAPER_API_KEY in your .env file.")
-                sys.exit(1)
-
-            rprint("[bold]Running Outscraper Google Shopping scrape…[/bold]")
-            client = OutscraperShopping(api_key=Config.OUTSCRAPER_API_KEY)
-            products = client.search_all_categories()
-            created, updated = upsert_products(products, source="outscraper")
-            log_scrape("all", "outscraper", len(products), updated)
             rprint(f"[green]Done.[/green] {len(products)} found, {created} new, {updated} updated.")
 
     elif command == "jobs":

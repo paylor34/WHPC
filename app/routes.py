@@ -212,26 +212,13 @@ def api_scrape():
     Trigger a scrape run (development/admin use only).
     In production, this should be behind auth and run via a task queue.
     """
-    source = request.json.get("source", "crawl4ai")  # crawl4ai | outscraper
+    import asyncio
+    from config import SCRAPE_TARGETS
+    from scraper.crawl4ai_scraper import scrape_all
+    from scraper.importer import upsert_products, log_scrape
 
-    # Lazy imports to keep startup fast
-    if source == "outscraper":
-        from config import Config
-        from scraper.outscraper_client import OutscraperShopping
-        from scraper.importer import upsert_products, log_scrape
-
-        client = OutscraperShopping(api_key=Config.OUTSCRAPER_API_KEY)
-        products = client.search_all_categories()
-        created, updated = upsert_products(products, source="outscraper")
-        log_scrape("all", "outscraper", len(products), updated)
-    else:
-        import asyncio
-        from config import SCRAPE_TARGETS
-        from scraper.crawl4ai_scraper import scrape_all
-        from scraper.importer import upsert_products, log_scrape
-
-        products = asyncio.run(scrape_all(SCRAPE_TARGETS))
-        created, updated = upsert_products(products, source="crawl4ai")
-        log_scrape("all", "crawl4ai", len(products), updated)
+    products = asyncio.run(scrape_all(SCRAPE_TARGETS))
+    created, updated = upsert_products(products, source="crawl4ai")
+    log_scrape("all", "crawl4ai", len(products), updated)
 
     return jsonify({"status": "ok", "found": len(products), "updated": updated})

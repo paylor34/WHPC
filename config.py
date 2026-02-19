@@ -5,7 +5,6 @@ load_dotenv()
 
 
 class Config:
-    OUTSCRAPER_API_KEY: str = os.getenv("OUTSCRAPER_API_KEY", "")
     SECRET_KEY: str = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "sqlite:///whpc.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -53,6 +52,18 @@ SCRAPE_TARGETS = [
         "search_url": "https://www.letsgetchecked.com/us/en/women/",
         "product_css": ".test-card",
         "logo": "https://www.letsgetchecked.com/favicon.ico",
+    },
+    {
+        "retailer": "Labcorp On Demand",
+        "search_url": "https://www.labcorpondemand.com/lab-tests/?category=womens-health",
+        "product_css": ".test-card",
+        "logo": "https://www.labcorpondemand.com/favicon.ico",
+    },
+    {
+        "retailer": "Quest Diagnostics",
+        "search_url": "https://questdirect.questdiagnostics.com/categories/womens-health",
+        "product_css": ".product-card",
+        "logo": "https://www.questdiagnostics.com/favicon.ico",
     },
 ]
 

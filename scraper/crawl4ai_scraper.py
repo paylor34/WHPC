@@ -6,7 +6,8 @@ Crawl4AI works by:
   2. Extracting structured data via CSS selectors or an LLM extraction strategy
   3. Returning clean markdown + structured JSON you can immediately persist
 
-Supported retailers: CVS, Walgreens, Amazon, Target, Everlywell, LetsGetChecked
+Supported retailers: CVS, Walgreens, Amazon, Target, Everlywell, LetsGetChecked,
+                     Labcorp On Demand, Quest Diagnostics
 """
 import asyncio
 import json
@@ -231,6 +232,66 @@ LGCHECKED_SCHEMA = {
     ],
 }
 
+LABCORP_SCHEMA = {
+    # Labcorp On Demand is a React-based direct-to-consumer lab-test storefront.
+    # Products are rendered as test cards on their category/search pages.
+    # ? lower confidence — run selector_inspector.py to verify against live DOM.
+    "name": "Labcorp On Demand Products",
+    "baseSelector": ".test-card, [class*='TestCard'], [class*='test-card'], article",  # ?
+    "wait_for": ".test-card, article",
+    "base_url": "https://www.labcorpondemand.com",
+    "fields": [
+        # ? title in h2/h3 or a heading within the card
+        {"name": "name",           "selector": "h2, h3, [class*='title'], [class*='name']",
+                                   "type": "text"},
+        # ? price in a <span> or <p> containing "price" in the class
+        {"name": "price",          "selector": "[class*='price'], [data-testid*='price']",
+                                   "type": "text"},
+        # ? original price if shown (sale/discount)
+        {"name": "original_price", "selector": "[class*='original-price'], [class*='was-price'], del, s",
+                                   "type": "text"},
+        # ? product link — Labcorp uses /lab-tests/<slug> paths
+        {"name": "url",            "selector": "a[href*='/lab-tests/'], a[href*='/test/'], article > a, a",
+                                   "type": "attribute", "attribute": "href"},
+        # ? first image inside the card
+        {"name": "image_url",      "selector": "picture img, img[src*='cdn'], img",
+                                   "type": "attribute", "attribute": "src"},
+        # ? add-to-cart / order button signals availability
+        {"name": "in_stock",       "selector": "button[class*='add'], button[class*='order'], button[class*='cart']",
+                                   "type": "exists"},
+    ],
+}
+
+QUEST_SCHEMA = {
+    # Quest Diagnostics QuestDirect is the direct-to-consumer portal for ordering
+    # lab tests online without a doctor's order.  The site is a React SPA.
+    # ? lower confidence — run selector_inspector.py to verify against live DOM.
+    "name": "Quest Diagnostics Products",
+    "baseSelector": ".product-card, [class*='ProductCard'], [class*='product-card'], article",  # ?
+    "wait_for": ".product-card, article",
+    "base_url": "https://questdirect.questdiagnostics.com",
+    "fields": [
+        # ? title in heading or dedicated class
+        {"name": "name",           "selector": "h2, h3, [class*='title'], [class*='name']",
+                                   "type": "text"},
+        # ? price element
+        {"name": "price",          "selector": "[class*='price'], [data-testid*='price']",
+                                   "type": "text"},
+        # ? compare-at / was price
+        {"name": "original_price", "selector": "[class*='original-price'], [class*='compare'], del, s",
+                                   "type": "text"},
+        # ? product links follow /products/<slug> or /test/<slug>
+        {"name": "url",            "selector": "a[href*='/products/'], a[href*='/test/'], article > a, a",
+                                   "type": "attribute", "attribute": "href"},
+        # ? product image
+        {"name": "image_url",      "selector": "picture img, img[src*='cdn'], img",
+                                   "type": "attribute", "attribute": "src"},
+        # ? order button when available
+        {"name": "in_stock",       "selector": "button[class*='order'], button[class*='add'], button[class*='cart']",
+                                   "type": "exists"},
+    ],
+}
+
 RETAILER_SCHEMAS = {
     "CVS": CVS_SCHEMA,
     "Walgreens": WALGREENS_SCHEMA,
@@ -238,6 +299,8 @@ RETAILER_SCHEMAS = {
     "Target": TARGET_SCHEMA,
     "Everlywell": EVERLYWELL_SCHEMA,
     "LetsGetChecked": LGCHECKED_SCHEMA,
+    "Labcorp On Demand": LABCORP_SCHEMA,
+    "Quest Diagnostics": QUEST_SCHEMA,
 }
 
 
@@ -254,7 +317,7 @@ def _infer_brand(name: str, retailer: str) -> str:
     Simple heuristic: if the retailer is a direct brand site, use it.
     Otherwise try to detect brand prefix in the product name.
     """
-    brand_sites = {"Everlywell", "LetsGetChecked"}
+    brand_sites = {"Everlywell", "LetsGetChecked", "Labcorp On Demand", "Quest Diagnostics"}
     if retailer in brand_sites:
         return retailer
     known_brands = [
