@@ -2,12 +2,14 @@
 Entry point for the Women's Health Price Comparison app.
 
 Usage:
-  python run.py              — start the web server + background scheduler
-  python run.py seed         — seed database with sample data
-  python run.py scrape       — run a one-off Crawl4AI scrape
-  python run.py export       — export DB → data/exports/products.json + listings.csv
-  python run.py import       — import data/exports/listings.csv into the database
-  python run.py jobs         — list scheduled jobs and their next run times
+  python run.py                    — start the web server + background scheduler
+  python run.py seed               — seed database with sample data, then fetch images
+  python run.py fetch-images       — fetch og:image for all products missing an image
+  python run.py fetch-images force — re-fetch images even if already populated
+  python run.py scrape             — run a one-off Crawl4AI scrape
+  python run.py export             — export DB → data/exports/products.json + listings.csv
+  python run.py import             — import data/exports/listings.csv into the database
+  python run.py jobs               — list scheduled jobs and their next run times
 """
 import logging
 import sys
@@ -30,7 +32,19 @@ def main():
         with app.app_context():
             from data.seed import seed_db
             seed_db()
+            print("Seeding complete. Now fetching product images…")
+            from data.fetch_images import fetch_all_images
+            updated, skipped = fetch_all_images()
+            print(f"Images: {updated} updated, {skipped} already had images.")
         print("Done. Run `python run.py` to start the web server.")
+
+    elif command == "fetch-images":
+        force = len(sys.argv) > 2 and sys.argv[2] == "force"
+        with app.app_context():
+            from data.fetch_images import fetch_all_images
+            print(f"Fetching images {'(force re-fetch)' if force else '(missing only)'}…")
+            updated, skipped = fetch_all_images(force=force)
+            print(f"Done. {updated} updated, {skipped} skipped.")
 
     elif command == "scrape":
         import asyncio

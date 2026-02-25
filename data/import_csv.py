@@ -38,12 +38,17 @@ def import_from_csv(csv_path: Path | None = None) -> tuple[int, int]:
                 continue  # skip rows with no price
 
             # ── Find or create Product ─────────────────────────────────────
+            description = (row.get("description") or "").strip()
+            image_url = (row.get("image_url") or "").strip()
+
             product = Product.query.filter_by(name=name, brand=brand).first()
             if not product:
                 product = Product(
                     name=name,
                     brand=brand,
                     category=category,
+                    description=description,
+                    image_url=image_url,
                     tags=tags,
                 )
                 db.session.add(product)
@@ -52,6 +57,10 @@ def import_from_csv(csv_path: Path | None = None) -> tuple[int, int]:
             else:
                 if tags and not product.tags:
                     product.tags = tags
+                if description and not product.description:
+                    product.description = description
+                if image_url and not product.image_url:
+                    product.image_url = image_url
 
             # ── Find or create Listing ─────────────────────────────────────
             retailer = (row.get("retailer") or "Unknown").strip()

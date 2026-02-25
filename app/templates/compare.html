@@ -1,57 +1,139 @@
 {% extends "base.html" %}
-{% block title %}Compare Products — WH Price Comparison{% endblock %}
+{% block title %}Compare Products — HerPriceCompare{% endblock %}
 
 {% block content %}
-<h1>Side-by-side comparison</h1>
+
+<nav class="breadcrumb">
+  <a href="{{ url_for('main.home') }}">Home</a>
+  <span class="sep">›</span>
+  <span>Compare</span>
+</nav>
+
+<div class="compare-page-header">
+  <h1><i class="fa fa-scale-balanced" style="color:var(--pink);margin-right:.5rem;"></i>Side-by-side comparison</h1>
+  {% if products %}
+  <p>Comparing {{ products|length }} product{{ 's' if products|length != 1 }} across {{ all_retailers|length }} retailer{{ 's' if all_retailers|length != 1 }}.</p>
+  {% endif %}
+</div>
+
 {% if products %}
 <div class="compare-table-wrap">
   <table class="compare-table">
     <thead>
       <tr>
-        <th>Feature</th>
-        {% for p in products %}<th>{{ p.name }}<br><small>{{ p.brand }}</small></th>{% endfor %}
+        <th class="label-col" style="background:var(--gray-2);">Product</th>
+        {% for p in products %}
+        <th>
+          <div class="compare-product-brand">{{ p.brand or '—' }}</div>
+          <div class="compare-product-name">{{ p.name }}</div>
+          <div style="margin-top:.5rem;">
+            <span class="badge badge-pink">{{ p.category }}</span>
+          </div>
+        </th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
+
+      {# ── Best price row ── #}
+      {% set min_prices = products | map(attribute='lowest_price') | select('ne', None) | list %}
+      {% set overall_min = min_prices | min if min_prices else None %}
       <tr>
-        <td>Category</td>
-        {% for p in products %}<td>{{ p.category }}</td>{% endfor %}
-      </tr>
-      <tr>
-        <td>Lowest price</td>
+        <td class="label-col">Best price</td>
         {% for p in products %}
-        <td>
-          {% if p.lowest_price %}<strong>${{ "%.2f"|format(p.lowest_price) }}</strong>
-          {% else %}N/A{% endif %}
+        <td class="{{ 'compare-cell-highlight' if p.lowest_price and p.lowest_price == overall_min }}">
+          {% if p.lowest_price %}
+          <span class="compare-best-price">
+            ${{ "%.2f"|format(p.lowest_price) }}
+            {% if p.lowest_price == overall_min %}
+            <span class="badge badge-teal" style="margin-left:.3rem;"><i class="fa fa-crown" style="font-size:.6rem;"></i> Best</span>
+            {% endif %}
+          </span>
+          {% else %}
+          <span style="color:var(--gray-4);">N/A</span>
+          {% endif %}
         </td>
         {% endfor %}
       </tr>
+
+      {# ── Per-retailer rows ── #}
       {% for retailer in all_retailers %}
       <tr>
-        <td>{{ retailer }}</td>
+        <td class="label-col">{{ retailer }}</td>
         {% for p in products %}
-        {% set listing = p.listings|selectattr("retailer","equalto",retailer)|first %}
+        {% set listing = p.listings | selectattr("retailer", "equalto", retailer) | first | default(None) %}
         <td>
           {% if listing %}
-          <a href="{{ listing.url }}" target="_blank">${{ "%.2f"|format(listing.price) }} ↗</a>
-          {% else %}—{% endif %}
+          <div style="display:flex;flex-direction:column;gap:.3rem;">
+            <a href="{{ listing.url }}" target="_blank" rel="noopener noreferrer"
+               style="font-weight:700;color:var(--pink);">
+              ${{ "%.2f"|format(listing.price) }}
+              <i class="fa fa-arrow-up-right-from-square" style="font-size:.65rem;"></i>
+            </a>
+            {% if listing.in_stock %}
+            <span class="badge badge-green" style="width:fit-content;">In stock</span>
+            {% else %}
+            <span class="badge badge-red" style="width:fit-content;">Out of stock</span>
+            {% endif %}
+            {% if listing.discount_pct %}
+            <span class="badge badge-orange" style="width:fit-content;">-{{ listing.discount_pct }}% off</span>
+            {% endif %}
+          </div>
+          {% else %}
+          <span style="color:var(--gray-4);">&mdash;</span>
+          {% endif %}
         </td>
         {% endfor %}
       </tr>
       {% endfor %}
+
+      {# ── Tags row ── #}
       <tr>
-        <td>Tags</td>
+        <td class="label-col">Tags</td>
         {% for p in products %}
         <td>
-          {% for tag in p.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}
-          {% if not p.tag_list %}—{% endif %}
+          {% if p.tag_list %}
+          <div class="tags" style="margin:0;">
+            {% for tag in p.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}
+          </div>
+          {% else %}
+          <span style="color:var(--gray-4);">&mdash;</span>
+          {% endif %}
         </td>
         {% endfor %}
       </tr>
+
+      {# ── Buy buttons row ── #}
+      <tr>
+        <td class="label-col">View product</td>
+        {% for p in products %}
+        <td>
+          <a class="btn btn-outline" href="{{ url_for('main.product', product_id=p.id) }}" style="font-size:.8rem;">
+            <i class="fa fa-eye"></i> View details
+          </a>
+        </td>
+        {% endfor %}
+      </tr>
+
     </tbody>
   </table>
 </div>
+
+<div style="margin-top:1.5rem;text-align:center;">
+  <a href="javascript:history.back()" class="btn btn-ghost">
+    <i class="fa fa-arrow-left"></i> Go back and adjust selection
+  </a>
+</div>
+
 {% else %}
-<p>Add products to compare via <code>/compare?ids=1,2,3</code>.</p>
+<div class="empty-state">
+  <div class="empty-icon">⚖️</div>
+  <h3>Nothing to compare yet</h3>
+  <p>Browse a category, check the boxes on products you want to compare, then click "Compare now".</p>
+  <a class="btn btn-primary" href="{{ url_for('main.home') }}" style="margin-top:1.25rem;">
+    <i class="fa fa-grid-2"></i> Browse categories
+  </a>
+</div>
 {% endif %}
+
 {% endblock %}

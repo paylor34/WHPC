@@ -1,27 +1,78 @@
 {% extends "base.html" %}
-{% block title %}Search: {{ q }} — WH Price Comparison{% endblock %}
+{% block title %}{% if q %}Search: {{ q }} — {% endif %}HerPriceCompare{% endblock %}
 
 {% block content %}
-<h1>Search results for "{{ q }}"</h1>
+
+<div class="search-header">
+  {% if q %}
+  <h1>Results for "{{ q }}"</h1>
+  <p class="result-count">
+    {% if results %}
+    {{ results|length }} result{{ 's' if results|length != 1 }} found
+    {% else %}
+    No results found
+    {% endif %}
+  </p>
+  {% else %}
+  <h1>Search products</h1>
+  <p class="result-count">Use the search bar above to find tests by name or brand.</p>
+  {% endif %}
+</div>
 
 {% if results %}
-<p>{{ results|length }} result{{ 's' if results|length != 1 }} found.</p>
 <div class="grid grid-3">
   {% for product in results %}
   <div class="card product-card">
-    <div class="product-info">
-      <span class="brand">{{ product.brand }}</span>
-      <h3><a href="{{ url_for('main.product', product_id=product.id) }}">{{ product.name }}</a></h3>
-      <span class="category-badge">{{ product.category }}</span>
-      {% if product.lowest_price %}
-      <p class="price">From <strong>${{ "%.2f"|format(product.lowest_price) }}</strong></p>
+    <div class="product-thumb-wrap">
+      {% if product.image_url %}
+      <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-thumb" loading="lazy">
+      {% else %}
+      <div class="product-thumb placeholder">🧪</div>
       {% endif %}
-      <a class="btn btn-primary" href="{{ url_for('main.product', product_id=product.id) }}">Compare prices</a>
+    </div>
+
+    <div class="product-body">
+      {% if product.brand %}
+      <span class="brand-badge">{{ product.brand }}</span>
+      {% endif %}
+
+      <p class="product-name">
+        <a href="{{ url_for('main.product', product_id=product.id) }}">{{ product.name }}</a>
+      </p>
+
+      <span class="badge badge-pink" style="width:fit-content;">{{ product.category }}</span>
+
+      <div class="product-footer">
+        <div class="price-big">
+          {% if product.lowest_price %}
+          <span class="from-label">From</span>
+          ${{ "%.2f"|format(product.lowest_price) }}
+          {% else %}
+          <span style="font-size:.85rem;color:var(--gray-5);">Price unavailable</span>
+          {% endif %}
+        </div>
+        <span class="retailer-pill">
+          {{ product.listings|length }} store{{ 's' if product.listings|length != 1 }}
+        </span>
+      </div>
+
+      <a class="btn-compare-sm" href="{{ url_for('main.product', product_id=product.id) }}">
+        <i class="fa fa-scale-balanced"></i> Compare prices
+      </a>
     </div>
   </div>
   {% endfor %}
 </div>
+
 {% elif q %}
-<p>No results for "{{ q }}". Try a different search term.</p>
+<div class="empty-state">
+  <div class="empty-icon">🔍</div>
+  <h3>No results for "{{ q }}"</h3>
+  <p>Try a different search term, or browse by category below.</p>
+  <a class="btn btn-primary" href="{{ url_for('main.home') }}" style="margin-top:1.25rem;">
+    <i class="fa fa-grid-2"></i> Browse categories
+  </a>
+</div>
 {% endif %}
+
 {% endblock %}
